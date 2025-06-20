@@ -4,7 +4,8 @@
   "description": "Netlify Function for processing PDFs",
   "main": "netlify/functions/process-pdf.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && cp -r assets netlify/functions/",
+    "dev": "tsc --watch"
   },
   "author": "",
   "license": "ISC",
