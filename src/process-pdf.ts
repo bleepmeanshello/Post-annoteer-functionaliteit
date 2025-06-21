@@ -1,4 +1,6 @@
 import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import { downloadPdf } from "./utils/pdf-downloader";
+import { annotatePdf } from "./utils/pdf-annotator";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*", // Of een specifiek domein voor extra veiligheid
@@ -84,6 +86,48 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
     
+    // Download alle PDFs
+    const pdfBuffers: Buffer[] = [];
+    for (let i = 0; i < pdfUrls.length; i++) {
+      const url = pdfUrls[i];
+      console.log(`Downloading PDF ${i + 1} of ${pdfUrls.length}...`);
+      try {
+        const buffer = await downloadPdf(url);
+        pdfBuffers.push(buffer);
+      } catch (downloadError: any) {
+        console.error(`Failed to download PDF from ${url}:`, downloadError.message);
+        // Gooi de error door naar de main catch block om een 500 response te triggeren
+        throw new Error(`Failed to process PDF from ${url}. Reason: ${downloadError.message}`);
+      }
+    }
+
+    // Verdeel respondenten over de PDF-bestanden en annoteer
+    const totalRespondents = metadata.respondenten.length;
+    const respondentsPerPdf = Math.ceil(totalRespondents / pdfUrls.length);
+    const annotatedPdfBuffers: (Buffer | Uint8Array)[] = [];
+
+    for (let i = 0; i < pdfBuffers.length; i++) {
+      const startIndex = i * respondentsPerPdf;
+      const endIndex = startIndex + respondentsPerPdf;
+      const respondentSlice = metadata.respondenten.slice(startIndex, endIndex);
+      const respondentCodes = respondentSlice.map(r => r.code);
+      
+      console.log(`Processing PDF ${i + 1} with ${respondentCodes.length} respondents.`);
+
+      if (respondentCodes.length > 0) {
+        const annotatedBuffer = await annotatePdf(
+          pdfBuffers[i],
+          respondentCodes,
+          metadata.logoUrl,
+          metadata.pagesCount // Dit is het aantal enquêtepagina's
+        );
+        annotatedPdfBuffers.push(annotatedBuffer);
+      } else {
+        // Als er geen respondenten zijn voor deze PDF, voeg de originele buffer toe
+        annotatedPdfBuffers.push(pdfBuffers[i]);
+      }
+    }
+
     // Mock response voor nu
     const mockResponse = {
       status: "success",
