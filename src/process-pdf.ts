@@ -1,6 +1,7 @@
 import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 import { downloadPdf } from "./utils/pdf-downloader";
 import { annotatePdf } from "./utils/pdf-annotator";
+import { calculateAnnotationPages, getPagesPerRespondentBlock } from "./utils/page-calculator";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*", // Of een specifiek domein voor extra veiligheid
@@ -86,6 +87,45 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
     
+    // DEBUG MODE: Voer een "dry run" uit en retourneer de berekeningen
+    if (event.queryStringParameters?.debug === 'true') {
+      const totalRespondents = metadata.respondenten.length;
+      const respondentsPerPdf = Math.ceil(totalRespondents / pdfUrls.length);
+      
+      const debugPlan = pdfUrls.map((url, pdfIndex) => {
+        const startIndex = pdfIndex * respondentsPerPdf;
+        const endIndex = startIndex + respondentsPerPdf;
+        const respondentSlice = metadata.respondenten.slice(startIndex, endIndex);
+        const respondentCodes = respondentSlice.map(r => r.code);
+        
+        const respondentDetails = respondentCodes.map((code, respondentIndexInPdf) => ({
+          code,
+          annotationPages: calculateAnnotationPages(respondentIndexInPdf, metadata.pagesCount)
+        }));
+
+        return {
+          pdfUrl: url,
+          pdfIndex: pdfIndex,
+          respondentsAssigned: respondentCodes.length,
+          respondentCodes,
+          respondentDetails
+        };
+      });
+
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          debug: true,
+          totalRespondents,
+          respondentsPerPdf,
+          pagesPerQuestionnaire: metadata.pagesCount,
+          pagesPerRespondentBlock: getPagesPerRespondentBlock(metadata.pagesCount),
+          plan: debugPlan
+        }, null, 2)
+      };
+    }
+
     // Download alle PDFs
     const pdfBuffers: Buffer[] = [];
     for (let i = 0; i < pdfUrls.length; i++) {
