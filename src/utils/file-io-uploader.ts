@@ -41,10 +41,10 @@ export async function uploadToFileIo(zipBuffer: Buffer, filename: string): Promi
     if (axios.isAxiosError(error)) {
       console.error(`Axios error uploading to file.io:`, error.response?.data || error.message);
       throw new Error(`Failed to upload to file.io: ${error.response?.data?.message || error.message}`);
-    } else if (error instanceof Error) {
-        console.error(`Unknown error uploading to file.io:`, error.message);
-        throw new Error(`An unknown error occurred during file upload: ${error.message}`);
+    } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Error uploading to file.io:`, errorMessage);
+        throw new Error(`An error occurred during file upload: ${errorMessage}`);
     }
-    throw new Error('An unknown error occurred during file upload.');
   }
 } 
