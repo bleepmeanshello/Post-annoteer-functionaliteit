@@ -1,14 +1,14 @@
 /**
- * Berekent het totale aantal pagina's dat voor één respondent wordt gereserveerd.
- * Dit omvat een brief, een blanco pagina, de enquêtepagina's en een optionele extra blanco pagina
- * om ervoor te zorgen dat het totaal een even getal is (voor correct dubbelzijdig afdrukken).
- * @param pagesPerQuestionnaire Het aantal enquêtepagina's voor de respondent.
- * @returns Het totale aantal pagina's in het blok voor de respondent.
+ * Calculates the total number of pages reserved for one respondent.
+ * This includes a cover letter, a blank page, the questionnaire pages, and an optional extra blank page
+ * to ensure the total is an even number (for proper double-sided printing).
+ * @param pagesPerQuestionnaire The number of questionnaire pages for the respondent.
+ * @returns The total number of pages in the respondent's block.
  */
 export function getPagesPerRespondentBlock(pagesPerQuestionnaire: number): number {
-  // 1 briefpagina + 1 blanco pagina + N enquêtepagina's
+  // 1 cover letter page + 1 blank page + N questionnaire pages
   let total = 2 + pagesPerQuestionnaire;
-  // Voeg een blanco pagina toe als het totaal oneven is
+  // Add a blank page if the total is odd
   if (total % 2 !== 0) {
     total++;
   }
@@ -16,16 +16,16 @@ export function getPagesPerRespondentBlock(pagesPerQuestionnaire: number): numbe
 }
 
 /**
- * Berekent de 0-gebaseerde paginaindices die geannoteerd moeten worden voor een specifieke respondent binnen een PDF.
- * @param respondentIndexInPdf De 0-gebaseerde index van de respondent binnen het PDF-bestand.
- * @param pagesPerQuestionnaire Het aantal enquêtepagina's per respondent.
- * @returns Een array van 0-gebaseerde paginaindices die geannoteerd moeten worden.
+ * Calculates the 0-based page indices that should be annotated for a specific respondent within a PDF.
+ * @param respondentIndexInPdf The 0-based index of the respondent within the PDF file.
+ * @param pagesPerQuestionnaire The number of questionnaire pages per respondent.
+ * @returns An array of 0-based page indices that should be annotated.
  */
 export function calculateAnnotationPages(respondentIndexInPdf: number, pagesPerQuestionnaire: number): number[] {
   const pagesPerBlock = getPagesPerRespondentBlock(pagesPerQuestionnaire);
   const startPageOfBlock = respondentIndexInPdf * pagesPerBlock;
   
-  // De annotaties beginnen na de briefpagina en de eerste blanco pagina.
+  // Annotations start after the cover letter page and the first blank page.
   const firstAnnotationPage = startPageOfBlock + 2;
   
   const pagesToAnnotate = Array.from(
@@ -33,10 +33,13 @@ export function calculateAnnotationPages(respondentIndexInPdf: number, pagesPerQ
     (_, i) => firstAnnotationPage + i
   );
 
-  console.log(`[DEBUG] Respondent ${respondentIndexInPdf}:`);
-  console.log(`  - Pages per block: ${pagesPerBlock}`);
-  console.log(`  - Block starts at page index: ${startPageOfBlock}`);
-  console.log(`  - Annotating ${pagesToAnnotate.length} pages: [${pagesToAnnotate.join(', ')}]`);
+  // Consider using a proper logging library with log levels instead of console.log
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEBUG] Respondent ${respondentIndexInPdf}:`);
+    console.log(`  - Pages per block: ${pagesPerBlock}`);
+    console.log(`  - Block starts at page index: ${startPageOfBlock}`);
+    console.log(`  - Annotating ${pagesToAnnotate.length} pages: [${pagesToAnnotate.join(', ')}]`);
+  }
 
   return pagesToAnnotate;
 } 
