@@ -75,17 +75,21 @@ export async function annotatePdf(
           const maxDim = 100;
           const logoDims = logoImage.scale(1);
           
-          const ratio = Math.min(maxDim / logoDims.width, maxDim / logoDims.height);
-          const scaledWidth = logoDims.width * ratio;
-          const scaledHeight = logoDims.height * ratio;
+          if (logoDims.width <= 0 || logoDims.height <= 0) {
+            console.warn('Logo has invalid dimensions, skipping logo embedding');
+          } else {
+            const ratio = Math.min(maxDim / logoDims.width, maxDim / logoDims.height);
+            const scaledWidth = logoDims.width * ratio;
+            const scaledHeight = logoDims.height * ratio;
 
-          console.log(`  > Drawing logo on page index ${pageIndex}`);
-          page.drawImage(logoImage, {
-            x: page.getWidth() - scaledWidth - 20,
-            y: page.getHeight() - scaledHeight - 20,
-            width: scaledWidth,
-            height: scaledHeight,
-          });
+            console.log(`  > Drawing logo on page index ${pageIndex}`);
+            page.drawImage(logoImage, {
+              x: page.getWidth() - scaledWidth - 20,
+              y: page.getHeight() - scaledHeight - 20,
+              width: scaledWidth,
+              height: scaledHeight,
+            });
+          }
         }
 
         // --- Voeg footer toe ---
@@ -107,9 +111,15 @@ export async function annotatePdf(
 
         // Teken de footer-tekst
         const textWidth = helveticaFont.widthOfTextAtSize(footerText, 10);
+        const maxAllowedWidth = rectWidth - 20; // 10px padding on each side
+        
+        if (textWidth > maxAllowedWidth) {
+          console.warn(`Footer text too wide (${textWidth}px) for rectangle (${maxAllowedWidth}px), text may be clipped`);
+        }
+        
         console.log(`  > Drawing footer ('${footerText.substring(0, 20)}...') on page index ${pageIndex}`);
         page.drawText(footerText, {
-          x: (page.getWidth() - textWidth) / 2,
+          x: Math.max(page.getWidth() * 0.1 + 10, (page.getWidth() - textWidth) / 2),
           y: 26, // Baseline voor de tekst, verticaal gecentreerd in de rechthoek
           font: helveticaFont,
           size: 10,

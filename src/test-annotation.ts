@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { calculateAnnotationPages, getPagesPerRespondentBlock } from './utils/page-calculator';
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
@@ -13,6 +13,14 @@ const CORS_HEADERS = {
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
+
+  if (event.httpMethod !== 'GET') {
+    return {
+      statusCode: 405,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ message: "Method Not Allowed" })
+    };
   }
 
   try {
@@ -43,10 +51,11 @@ export const handler: Handler = async (event, context) => {
       body: JSON.stringify(results, null, 2),
     };
   } catch (error: any) {
+    console.error('Error in test-annotation handler:', error);
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ message: "Error generating test data", error: error.message }),
+      body: JSON.stringify({ message: "Error generating test data" }),
     };
   }
 }; 
